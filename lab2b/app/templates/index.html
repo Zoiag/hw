@@ -1,0 +1,9 @@
+<!-- {% extends "baseTemplate.html" %} -->
+
+{% block content %}
+    {% if user %}
+        <h1>Hello, {{ user.username }}</h1>
+    {% else %}
+        <h2>Hello, Stranger</h2>
+    {% endif %}
+{% endblock %}
