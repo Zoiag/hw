@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Form Template</title>
+    {{ bootstrap.load_css() }}
+    {{ bootstrap.load_js() }}
+</head>
+<div class="container d-flex justify-content-center mt-5">
+
+	<div class="card">
+
+		<div class="top-container">
+
+			<div class="ml-3">
+				<h5 class="name">{{ username }}</h5>
+				<p class="email">{{ email }}</p>
+				<p class="gender">{{ gender }}</p>
+			</div>
+		</div>
+
+	</div>
+
+</div>
