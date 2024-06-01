@@ -1,0 +1,10 @@
+{% extends "baseTemplate.html" %}
+
+{% block content %}
+    {% if login %}
+        <h1>Привет, {{ login }}</h1>
+        <h2>email: {{ email }}</h2>
+    {% else %}
+        <h2>Привет, незнакомец</h2>
+    {% endif %}
+{% endblock %}
