@@ -1,0 +1,91 @@
+{% extends "main/baseTemplate.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            {% if request.args.get('order_success') %}
+                <div class="alert alert-success">
+                    Ваш заказ успешно оформлен! С вами свяжутся в ближайшее время.
+                </div>
+            {% endif %}
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Корзина</h3>
+                </div>
+                <div class="card-body">
+                    {% if show_login_message %}
+                        <p>Пожалуйста, <a href="{{ url_for('auth.login') }}">авторизуйтесь</a> или <a href="{{ url_for('auth.register') }}">зарегистрируйтесь</a>, чтобы просмотреть корзину.</p>
+                    {% else %}
+                        {% if cart_items %}
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Товар</th>
+                                        <th>Цена</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in cart_items %}
+                                        <tr>
+                                            <td>
+                                                {% if item.product.image_url %}
+                                                    <img src="{{ url_for('static', filename='images/' ~ item.product.image_url) }}" class="img-thumbnail" style="width: 100px;" alt="{{ item.product.name }}">
+                                                {% else %}
+                                                    <img src="{{ url_for('static', filename='images/default_image.jpg') }}" class="img-thumbnail" style="width: 100px;" alt="{{ item.product.name }}">
+                                                {% endif %}
+                                                {{ item.product.name }}
+                                            </td>
+                                            <td>{{ item.product.price }} руб.</td>
+                                            <td>
+                                                <button class="btn btn-danger remove-from-cart" data-product-id="{{ item.product.id }}">Удалить</button>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    <tr>
+                                        <td><strong>Итого:</strong></td>
+                                        <td><strong>{{ total }} руб.</strong></td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <button class="btn btn-primary" onclick="location.href='{{ url_for('main.checkout') }}'">Оформить заказ</button>
+                        {% else %}
+                            <p>Ваша корзина пуста.</p>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.remove-from-cart').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            fetch('/toggle_cart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    product_id: productId,
+                    action: 'remove'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

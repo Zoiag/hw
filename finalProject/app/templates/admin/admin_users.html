@@ -1,0 +1,37 @@
+{% extends "main/baseTemplate.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Управление пользователями</h3>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for user in users %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ user.username }}</strong> - {{ user.role.name }}
+                                </div>
+                                <div>
+                                    <form method="POST" action="{{ url_for('main.change_user_role', user_id=user.id) }}" class="d-inline">
+                                        {{ form.hidden_tag() }}
+                                        <select name="role" class="form-select form-select-sm d-inline w-auto">
+                                            {% for role in roles %}
+                                                <option value="{{ role.id }}" {% if role.id == user.role.id %}selected{% endif %}>{{ role.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-primary">Изменить</button>
+                                    </form>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

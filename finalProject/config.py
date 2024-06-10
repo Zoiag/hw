@@ -1,0 +1,44 @@
+import os
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+
+class Config:
+    SECRET_KEY = os.environ.get('SECRET_KEY') or "hard to unlock"
+    MAIL_SERVER = os.environ.get('MAIL_SERVER') or "smtp.googlemail.com"
+    MAIL_PORT = os.environ.get('MAIL_PORT') or "587"
+    MAIL_USE_TLS = int(os.environ.get('MAIL_USE_TLS', '5870'))
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME') or "student1imo327@gmail.com"
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD') or "gqnc fxsr nzoh xwyx"
+    SQLALCHEMY_TRACK_MODIFICATIONS = True
+    FLASKY_ADMIN = "test@testovich.ru"
+    UPLOAD_FOLDER = os.path.join(os.getcwd(), 'app/static/images')
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+    @staticmethod
+    def init_app(app):
+        pass
+
+
+class DevelopmentConfig(Config):
+    DEBUG = True
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
+                              'mysql://root:@localhost/flask_education'
+
+
+class TestingConfig(Config):
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
+                              'mysql://root:@localhost/flask_education'
+
+
+class ProductionConfig(Config):
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
+                              'mysql://root:@localhost/flask_education'
+
+
+config = {
+    'development': DevelopmentConfig,
+    'testing': TestingConfig,
+    'production': ProductionConfig,
+    'default': DevelopmentConfig
+}

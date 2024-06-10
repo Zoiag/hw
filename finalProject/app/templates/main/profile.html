@@ -1,0 +1,104 @@
+{% extends "main/baseTemplate.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8"> <!-- Изменено на col-md-8 для увеличения ширины -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Профиль</h3>
+                </div>
+                <div class="card-body">
+                    {% if current_user.is_authenticated %}
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Логин:</label>
+                            <input type="text" class="form-control" id="username" value="{{ current_user.username }}" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Почта:</label>
+                            <input type="email" class="form-control" id="email" value="{{ current_user.email }}" readonly>
+                        </div>
+                        {% if current_user.role.name != 'User' %}
+                            <div class="mb-3">
+                                <label for="role" class="form-label">Роль:</label>
+                                <input type="text" class="form-control" id="role" value="{{ current_user.role.name }}" readonly>
+                            </div>
+                        {% endif %}
+                        {% if current_user.role.name in ['Administrator', 'Moderator'] %}
+                            <div class="mb-3">
+                                <a href="{{ url_for('main.for_admin') if current_user.role.name == 'Administrator' else url_for('main.for_moderator') }}" class="btn btn-outline-primary">Панель управления</a>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <p>Пожалуйста, <a href="{{ url_for('auth.login') }}">авторизуйтесь</a> для просмотра профиля.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Сохраненные товары</h3>
+                </div>
+                <div class="card-body">
+                    {% if saved_products %}
+                        <ul class="list-group">
+                            {% for product in saved_products %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        {% if product.image_url %}
+                                            <img src="{{ url_for('static', filename='images/' ~ product.image_url) }}" alt="{{ product.name }}" width="50" height="50" class="me-3">
+                                        {% else %}
+                                            <img src="{{ url_for('static', filename='images/default_image.jpg') }}" alt="{{ product.name }}" width="50" height="50" class="me-3">
+                                        {% endif %}
+                                        <div>
+                                            <h5>{{ product.name }}</h5>
+                                            <p class="mb-0">Цена: {{ product.price }} руб.</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <a href="{{ url_for('main.product', product_id=product.id) }}" class="btn btn-sm btn-primary">Подробнее</a>
+                                        <button class="btn btn-sm btn-danger remove-from-saved" data-product-id="{{ product.id }}">Удалить</button>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>У вас нет сохраненных товаров.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.remove-from-saved').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            fetch('/toggle_save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    product_id: productId,
+                    action: 'remove'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

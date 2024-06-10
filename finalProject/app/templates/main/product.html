@@ -1,0 +1,285 @@
+{% extends "main/baseTemplate.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">{{ product.name }}</h3>
+                </div>
+                <div class="card-body">
+                    {% if product.image_url %}
+                        <img src="{{ url_for('static', filename='images/' ~ product.image_url) }}" class="img-fluid mb-3" alt="{{ product.name }}" id="productImage">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='images/default_image.jpg') }}" class="img-fluid mb-3" alt="{{ product.name }}" id="productImage">
+                    {% endif %}
+                    <p>{{ product.description }}</p>
+                    <p>Цена: {{ product.price }} руб.</p>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        {% if in_cart %}
+                            <button class="btn btn-danger toggle-cart" data-product-id="{{ product.id }}" data-action="remove">Удалить из корзины</button>
+                        {% else %}
+                            <button class="btn btn-success toggle-cart" data-product-id="{{ product.id }}" data-action="add">Добавить в корзину</button>
+                        {% endif %}
+                        {% if in_saved %}
+                            <button class="btn btn-outline-success btn-sm save-product" data-product-id="{{ product.id }}" data-action="remove">Сохранено</button>
+                        {% else %}
+                            <button class="btn btn-outline-secondary btn-sm save-product" data-product-id="{{ product.id }}" data-action="add">Сохранить</button>
+                        {% endif %}
+                    </div>
+                    <hr>
+                    <!-- Комментарии -->
+                    <h5>Комментарии</h5>
+                    <div id="reviews{{ product.id }}">
+                        {% for review in reviews %}
+                            <div class="review">
+                                <p><strong>{{ review.user.username }}</strong> {{ review.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                                <p>{{ review.content }}</p>
+                                <button class="btn btn-outline-success like-review" data-review-id="{{ review.id }}">👍 {{ review.likes_count }}</button>
+                                <button class="btn btn-outline-danger dislike-review" data-review-id="{{ review.id }}">👎 {{ review.dislikes_count }}</button>
+                                {% if current_user.is_authenticated and (current_user.id == review.user_id or current_user.can(Permission.MODERATE)) %}
+                                    <button class="btn btn-outline-danger delete-review" data-review-id="{{ review.id }}">Удалить</button>
+                                {% endif %}
+                            </div>
+                            <hr>
+                        {% endfor %}
+                    </div>
+                    {% if current_user.is_authenticated %}
+                        {% if not reviews|selectattr("user_id", "equalto", current_user.id)|list %}
+                            <!-- Форма добавления комментария -->
+                            <form action="{{ url_for('main.add_review', product_id=product.id) }}" method="post">
+                                {{ form.hidden_tag() }}
+                                <div class="form-group">
+                                    <textarea class="form-control" name="content" rows="3" placeholder="Оставьте ваш комментарий"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary mt-2">Оставить комментарий</button>
+                            </form>
+                        {% else %}
+                            <p>Вы уже оставили комментарий на этот товар.</p>
+                        {% endif %}
+                    {% else %}
+                        <p>Пожалуйста, <a href="{{ url_for('auth.login') }}">войдите</a>, чтобы оставить комментарий.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно -->
+<div class="modal fade" id="imageModal" tabindex="-1" role="dialog" aria-labelledby="imageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageModalLabel">{{ product.name }}</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center">
+                {% if product.image_url %}
+                    <img src="{{ url_for('static', filename='images/' ~ product.image_url) }}" class="img-fluid enlarged-image" alt="{{ product.name }}">
+                {% else %}
+                    <img src="{{ url_for('static', filename='images/default_image.jpg') }}" class="img-fluid enlarged-image" alt="{{ product.name }}">
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    /**
+     * Открытие изображения в модальном окне
+     *
+     * При клике на изображение товара открывается модальное окно с увеличенным изображением.
+     */
+    document.getElementById('productImage').addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+        modal.show();
+    });
+
+    /**
+     * Обработка сохранения/удаления товара в/из сохраненные
+     *
+     * При клике на кнопку "Сохранить" или "Сохранено" отправляется запрос на сервер для сохранения
+     * или удаления товара из списка сохраненных. В зависимости от ответа сервера изменяется текст
+     * и стиль кнопки.
+     */
+    document.querySelector('.save-product').addEventListener('click', function() {
+        const productId = this.dataset.productId;
+        const action = this.dataset.action;
+        fetch('/toggle_save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ form.csrf_token._value() }}'
+            },
+            body: JSON.stringify({
+                product_id: productId,
+                action: action
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (action === 'add') {
+                    this.textContent = 'Сохранено';
+                    this.classList.remove('btn-outline-secondary');
+                    this.classList.add('btn-outline-success');
+                    this.dataset.action = 'remove';
+                } else {
+                    this.textContent = 'Сохранить';
+                    this.classList.remove('btn-outline-success');
+                    this.classList.add('btn-outline-secondary');
+                    this.dataset.action = 'add';
+                }
+            } else {
+                alert(data.message);
+            }
+        });
+    });
+
+    /**
+     * Обработка добавления/удаления товара в/из корзину
+     *
+     * При клике на кнопку "Добавить в корзину" или "Удалить из корзины" отправляется запрос на сервер для
+     * добавления или удаления товара из корзины. В зависимости от ответа сервера изменяется текст
+     * и стиль кнопки.
+     */
+    document.querySelectorAll('.toggle-cart').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            const action = this.dataset.action;
+            fetch('/toggle_cart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ form.csrf_token._value() }}'
+                },
+                body: JSON.stringify({
+                    product_id: productId,
+                    action: action
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (action === 'add') {
+                        this.textContent = 'Удалить из корзины';
+                        this.classList.remove('btn-success');
+                        this.classList.add('btn-danger');
+                        this.dataset.action = 'remove';
+                    } else {
+                        this.textContent = 'Добавить в корзину';
+                        this.classList.remove('btn-danger');
+                        this.classList.add('btn-success');
+                        this.dataset.action = 'add';
+                    }
+                } else {
+                    alert(data.message);
+                }
+            });
+        });
+    });
+
+    /**
+     * Обработка лайков комментариев
+     *
+     * При клике на кнопку лайка комментария отправляется запрос на сервер для добавления лайка.
+     * В зависимости от ответа сервера обновляется количество лайков и дизлайков у комментария.
+     */
+    document.querySelectorAll('.like-review').forEach(button => {
+        button.addEventListener('click', function() {
+            const reviewId = this.dataset.reviewId;
+            fetch(`/review/${reviewId}/like`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ form.csrf_token._value() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.textContent = `👍 ${data.likes_count}`;
+                    const dislikeButton = document.querySelector(`.dislike-review[data-review-id="${reviewId}"]`);
+                    if (dislikeButton) {
+                        dislikeButton.textContent = `👎 ${data.dislikes_count}`;
+                    }
+                } else {
+                    alert(data.message);
+                }
+            });
+        });
+    });
+
+    /**
+     * Обработка дизлайков комментариев
+     *
+     * При клике на кнопку дизлайка комментария отправляется запрос на сервер для добавления дизлайка.
+     * В зависимости от ответа сервера обновляется количество дизлайков и лайков у комментария.
+     */
+    document.querySelectorAll('.dislike-review').forEach(button => {
+        button.addEventListener('click', function() {
+            const reviewId = this.dataset.reviewId;
+            fetch(`/review/${reviewId}/dislike`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ form.csrf_token._value() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.textContent = `👎 ${data.dislikes_count}`;
+                    const likeButton = document.querySelector(`.like-review[data-review-id="${reviewId}"]`);
+                    if (likeButton) {
+                        likeButton.textContent = `👍 ${data.likes_count}`;
+                    }
+                } else {
+                    alert(data.message);
+                }
+            });
+        });
+    });
+
+    /**
+     * Обработка удаления комментариев
+     *
+     * При клике на кнопку удаления комментария отправляется запрос на сервер для удаления комментария.
+     * В зависимости от ответа сервера страница перезагружается для обновления списка комментариев.
+     */
+    document.querySelectorAll('.delete-review').forEach(button => {
+        button.addEventListener('click', function() {
+            const reviewId = this.dataset.reviewId;
+            fetch(`/review/${reviewId}/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ form.csrf_token._value() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message);
+                }
+            });
+        });
+    });
+});
+</script>
+
+<style>
+.enlarged-image {
+    width: 100%;
+    height: auto;
+}
+</style>
+
+{% endblock %}

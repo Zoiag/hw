@@ -1,0 +1,61 @@
+{% extends "main/baseTemplate.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Управление комментариями</h3>
+                </div>
+                <div class="card-body">
+                    {% if comments %}
+                        <ul class="list-group">
+                            {% for comment in comments %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center" id="comment-{{ comment.id }}">
+                                    <div>
+                                        <strong>{{ comment.user.username }}</strong> - {{ comment.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+                                        <p>{{ comment.content }}</p>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-sm btn-danger delete-comment" data-comment-id="{{ comment.id }}">Удалить</button>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>Нет комментариев для отображения.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.delete-comment').forEach(button => {
+        button.addEventListener('click', function() {
+            const commentId = this.dataset.commentId;
+            if (confirm('Вы уверены, что хотите удалить этот комментарий?')) {
+                fetch(`/comment/${commentId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById(`comment-${commentId}`).remove();
+                    } else {
+                        alert(data.message);
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
