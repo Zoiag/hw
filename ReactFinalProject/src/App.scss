@@ -1,0 +1,23 @@
+.App {
+    text-align: center;
+}
+
+.filters {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin: 20px;
+}
+
+.search-bar,
+.category-filter,
+.year-filter {
+    margin: 0 10px;
+    width: 100%;
+    max-width: 300px;
+}
+
+.filter-input {
+    width: 100%;
+}
